@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
+from selenium.webdriver.chrome.options import Options 
 from twilio.rest import Client
 
 class DateFinder():
@@ -19,8 +20,12 @@ class DateFinder():
     self.phone_number = phone_number
     self.preferred_language = preferred_language
     self.site_url = "https://www.services.gov.on.ca/sf/#/oneServiceDetail/137/ab/12043"
-    self.driver = webdriver.Chrome()
+
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    self.driver = webdriver.Chrome(options=chrome_options)
     self.driver.maximize_window()
+
     self.twilio_client = Client(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
 
   def execute(self):
@@ -30,8 +35,9 @@ class DateFinder():
       available_dates = self._find_dates()
       if available_dates:
         self._send_text(available_dates)
+        return True
       else:
-        print("There are no available dates right now. Try again later.")
+        print("There are no available dates right now.")
         self.driver.quit()
 
   def _fill_form(self) -> bool:
@@ -87,10 +93,19 @@ class DateFinder():
 
 if __name__ == "__main__":
   load_dotenv()
-  first_name = ""
-  last_name = ""
-  email = ""
-  phone_number = ""
-  preferred_language = ""
+  try:
+    first_name = input("Enter first name: ")
+    last_name = input("Enter last name: ")
+    email = input("Enter email: ")
+    phone_number = input("Enter phone number (XXX-XXX-XXXX): ")
+    preferred_language = input("Enter preferred language (English/French): ")
+    execution_interval = int(input("Enter often you want to check for available dates (minutes): "))
+  except Exception as e:
+    print("Invalid input. Quitting...")
+    quit()
   DateFinder = DateFinder(first_name, last_name, email, phone_number, preferred_language)
-  DateFinder.execute()
+  while True:
+    if DateFinder.execute():
+      break
+    time.sleep(execution_interval * 60)
+    
